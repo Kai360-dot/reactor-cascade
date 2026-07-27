@@ -13,7 +13,8 @@
 
 static constexpr double RTOL = 0.05;
 // Number of Subsamples, as 8192 are more than is needed
-static constexpr size_t NSUB = 2000;
+static constexpr size_t NUM_FEAS = 8192;
+static constexpr size_t NSUB     = 2000;
 // limit on number of points selected from cstr-2 per cstr-1 point
 static constexpr size_t MMAX = 5;
 
@@ -69,13 +70,14 @@ static void run_reconstruction()
   size_t stride = live1.size() > NSUB ? live1.size() / NSUB : 1;
   size_t cand{}, truefeas{}, unmatched{}, tried{};
 
-  for (size_t i = 0; i < live1.size(); i += stride)
+  for (size_t i = 0; i < live1.size() && truefeas != NUM_FEAS; i += stride)
   {
     std::vector<double> r1 = live1[i];
     size_t m               = 0;  // count matches on cstr-2 set
     ++tried;
     for (const auto& r2 : live2)
     {
+      if (truefeas == NUM_FEAS) break;
       double dist = 0.0;
       for (size_t k = 0; k < 3; ++k)
       {
