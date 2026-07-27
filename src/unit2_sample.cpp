@@ -9,9 +9,13 @@
  */
 
 #include <armadillo>
+#include <atomic>
 #include <cstddef>
+#include <ffcustom.hpp>
 #include <ffunc.hpp>
 #include <fstream>
+#include <interval.hpp>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -34,17 +38,38 @@ int main()
   // constraint values (cu constraint is implicit, purity and conversion floor)
   auto C2 = dag.add_vars(2, "c");
 
-  // reactor setup
-  auto out2 = Flowsheet::cstr(U2, D2[0], D2[1], P2[0], P2[1]);
-  auto tot2 = out2[0] + out2[1] + out2[2];
-
-  std::vector<mc::FFVar> G2{
-      C2[0] - out2[1] / tot2,                 // MCB purity floor cstr-2
-      C2[1] - (1 - out2[0] / Flowsheet::CA0)  // conversion floor benzene cstr-2
-  };
-  // third constraint from ANN
+  // constraint from ANN
   MLP cu = MLP::load("data/mlp_cu.txt");
-  G2.push_back(cu(U2)[0]);
+
+  using I = mc::Interval;      // satisfy template (non functional type)
+  mc::FFCustom<I> LazySelect;  // conditional operation
+  std::atomic<size_t> feasible{0}, infeasible{0};  // NS workers run parallel
+  using dvec = std::vector<double>;
+
+  // in-tray, fixed by the order of vIn below:
+  //   x = { T2, tau2, c1A, c1B, c1C, th1, th2, purB, convA }
+  //         [0]  [1]   [2]  [3]  [4]  [5]  [6]  [7]   [8]
+  LazySelect.set_eval([&feasible, &infeasible, &cu](const dvec& x) -> dvec {
+    const double rho = cu(dvec{x[2], x[3], x[4]})[0];
+    if (rho > 0)  // inlet not reachable per ANN: skip the physics; all three
+    {             // outputs carry the fence margin so crit ranks by it
+      ++infeasible;
+      return {rho, rho, rho};
+    }
+    ++feasible;
+    const dvec out2 =
+        Flowsheet::cstr(dvec{x[2], x[3], x[4]}, x[0], x[1], x[5], x[6]);
+    const double tot2 = out2[0] + out2[1] + out2[2];
+    return {rho,
+            x[7] - out2[1] / tot2,                   // MCB purity floor cstr-2
+            x[8] - (1 - out2[0] / Flowsheet::CA0)};  // conversion floor benzene
+  });
+
+  // wire op into dag: 9 inputs per order above, 3 outputs
+  std::vector<mc::FFVar> vIn{D2[0], D2[1], U2[0], U2[1], U2[2],
+                             P2[0], P2[1], C2[0], C2[1]};
+  mc::FFVar** ppG = LazySelect(3, vIn, 1);
+  std::vector<mc::FFVar> G2{*ppG[0], *ppG[1], *ppG[2]};
 
   mc::NSFEAS NS;
   NS.set_dag(dag);
@@ -77,6 +102,8 @@ int main()
   // NOTE: only last two values are used as compared to src/global_sample.cpp
   int status = NS.sample({0.55, 0.70});
   NS.stats.display();
+  std::cout << "cu gate: physics skipped on " << infeasible
+            << " evals, executed on " << feasible << "\n";
 
   auto dump = [](const auto& pts, const std::string& name) {
     std::ofstream f(name);
