@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <ffunc.hpp>
 #include <fstream>
+#include <iomanip>
 
 #include "flowsheet.hpp"
 #include "nsfeas.hpp"
@@ -19,9 +20,10 @@ int main()
   // and outputs of (out1, out2, G) at top, with operations linking them.
   Flowsheet fs(dag);
 
+  size_t REQUIRED_NUMLIVE = 8192;
   mc::NSFEAS NS;
   NS.options.FEASCRIT  = mc::NSFEAS::Options::VAR;
-  NS.options.NUMLIVE   = 8192;
+  NS.options.NUMLIVE   = REQUIRED_NUMLIVE;
   NS.options.NUMPROP   = 256;
   NS.options.MAXITER   = 20'000;
   NS.options.MAXTHREAD = 0;
@@ -52,7 +54,21 @@ int main()
   // - Factor: current inflation applied to live-set ellipsoid when proposing
   // (ELLMAG * nestMass^ELLRED) shrinks with iterations
 
+  // NOTE: we take the minimum, because we don't care whether the batching
+  // policy of the nested sampler has batched more points than required.
+  // Technically this is just a matter of opting out early or continuing to
+  // evaluate. The quality of the algorithm shouldn't really be evaluated based
+  // on the batch repacement size.
   NS.stats.display();
+  std::cout << "Found Feasible: "
+            << std::min(REQUIRED_NUMLIVE, NS.stats.numfeas)
+            << " total evaluated: " << NS.stats.numfct
+            << " fraction: " << std::setprecision(4)
+            << (static_cast<double>(
+                    std::min(REQUIRED_NUMLIVE, NS.stats.numfeas)) /
+                NS.stats.numfct)
+            << "\n";
+
   // refer to: _liveFEAS.insert in MANGUS NSFEAS
   auto dump = [](const auto& pts, const std::string& name) {
     std::ofstream f(name);
