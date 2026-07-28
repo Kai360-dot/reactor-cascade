@@ -1,6 +1,6 @@
 import pandas as pd
 
-from trellis import trellis_plot
+from tools.trellis import trellis_plot
 
 df_live_ = pd.read_csv("../data/global_live.csv")
 df_dead_ = pd.read_csv("../data/global_dead.csv")

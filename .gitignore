@@ -7,3 +7,4 @@ plots/trellis.png
 plots/trellis_live_dead.png
 data/*.txt
 logs
+__pycache__
