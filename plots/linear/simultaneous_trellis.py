@@ -1,10 +1,20 @@
+import sys
+from pathlib import Path
+
 import pandas as pd
+import matplotlib
+
+matplotlib.use("Agg")  # use on WSL2
+
+PLOTS = Path(__file__).resolve().parent.parent  # .../reactor_cascade/plots
+sys.path.insert(0, str(PLOTS))  # make `tools` importable from any cwd
 
 from tools.trellis import trellis_plot
 
-df_live_ = pd.read_csv("../data/global_live.csv")
-df_dead_ = pd.read_csv("../data/global_dead.csv")
-df_disc_ = pd.read_csv("../data/global_discard.csv")
+DATA = PLOTS.parent / "data"
+df_live_ = pd.read_csv(DATA / "global_live.csv")
+df_dead_ = pd.read_csv(DATA / "global_dead.csv")
+df_disc_ = pd.read_csv(DATA / "global_discard.csv")
 
 
 def plot_df(df_live: pd.DataFrame, df_dead: pd.DataFrame):
@@ -32,7 +42,7 @@ def plot_df(df_live: pd.DataFrame, df_dead: pd.DataFrame):
         y_label=r"$T_2$ [K]",
         col_label=r"$\tau_1$ [min]",
         row_label=r"$\tau_2$ [min]",
-        save="trellis_global.png",
+        save=str(Path(__file__).resolve().parent / "trellis_global.png"),
         colors=["crimson", "royalblue"],
         ncols=3,
         nrows=3,
