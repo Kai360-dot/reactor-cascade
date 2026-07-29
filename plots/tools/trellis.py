@@ -265,7 +265,7 @@ def trellis_plot(
         left=0.075,
         right=right_edge,
         bottom=0.085,
-        top=0.88 if title else 0.92,
+        top=0.85 if title else 0.89,
         wspace=0.62,
         hspace=0.88,
     )
