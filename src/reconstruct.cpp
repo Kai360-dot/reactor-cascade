@@ -4,6 +4,8 @@
 #include <ffunc.hpp>
 #include <fstream>
 #include <iostream>
+#include <numeric>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -70,13 +72,22 @@ static void run_reconstruction()
   size_t stride = live1.size() > NSUB ? live1.size() / NSUB : 1;
   size_t cand{}, truefeas{}, unmatched{}, tried{};
 
+  // NOTE: To avoid bands in the corner plot projections we shuffle the values
+  // in the set of live2
+  std::mt19937 rng(42);
+  std::vector<size_t> idx(live2.size());
+  std::iota(idx.begin(), idx.end(), 0);
+
   for (size_t i = 0; i < live1.size() && truefeas != NUM_FEAS; i += stride)
   {
     std::vector<double> r1 = live1[i];
     size_t m               = 0;  // count matches on cstr-2 set
     ++tried;
-    for (const auto& r2 : live2)
+
+    std::shuffle(idx.begin(), idx.end(), rng);
+    for (size_t j : idx)
     {
+      const std::vector<double>& r2 = live2[j];
       if (truefeas == NUM_FEAS) break;
       double dist = 0.0;
       for (size_t k = 0; k < 3; ++k)
@@ -102,8 +113,9 @@ static void run_reconstruction()
   {
     auto false_feas_rate = 100.0 * (cand - truefeas) / cand;
     std::cout << "reconstruction: " << cand << " pairs " << truefeas
-              << " true-feasible " << false_feas_rate << " false-feasible rate "
-              << unmatched << "/" << tried << " unmatched.\n";
+              << " true-feasible " << false_feas_rate << " %"
+              << " false-feasible rate " << unmatched << "/" << tried
+              << " unmatched.\n";
   }
 }
 
