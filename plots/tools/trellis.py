@@ -236,7 +236,7 @@ def trellis_plot(
                 ax.set_ylabel(y_label, fontsize=10)
 
             # top range bar: col_var, this column's bin highlighted
-            tb = ax.inset_axes([0.0, 1.07, 1.0, 0.09])
+            tb = ax.inset_axes([0.0, 1.10, 1.0, 0.09])
             tb.set_xlim(clo_, chi_)
             tb.set_ylim(0, 1)
             tb.axvspan(clo, chi, color="0.55")
@@ -271,14 +271,6 @@ def trellis_plot(
     )
     if title:
         fig.suptitle(title, fontsize=14, y=0.975)
-    fig.text(
-        0.5,
-        0.015,
-        f"columns bin {col_label} (low to high);  rows bin {row_label} (high to low)",
-        ha="center",
-        fontsize=8,
-        color="0.45",
-    )
 
     if labels is not None and c is None:
         handles = [
