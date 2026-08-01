@@ -19,6 +19,7 @@ struct Flowsheet
   // nominal pseudo-first-order pre-exponentials
   static std::array<double, 2> theta_nominal()
   {
+    // NOTE: 0.5 mol/L is the assumed chlorine concentration
     double const k1ref = 8.84e-3 * 60.0 * 0.5;  // 1/min
     double const k2ref = k1ref / 8;             // 1/min
     return {k1ref * std::exp(E1 / (R * TREF)),
